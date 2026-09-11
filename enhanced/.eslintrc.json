@@ -1,0 +1,56 @@
+{
+  "extends": ["../.eslintrc.json"],
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["@/*", "apps/readest-app/src/*", "../**/apps/readest-app/src/*"],
+            "message": "enhanced/core/ must not import Readest internal paths. Use adapters/readest/ instead."
+          }
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["adapters/readest/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    },
+    {
+      "files": ["core/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["react", "react-dom", "@tauri-apps/*", "@/*", "apps/readest-app/src/*"],
+                "message": "enhanced/core/ must not import React, DOM, Tauri, or Readest internals."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["features/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/*", "apps/readest-app/src/*", "../**/apps/readest-app/src/*"],
+                "message": "enhanced/features/ must not directly import Readest internals. Use adapters/readest/ instead."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
