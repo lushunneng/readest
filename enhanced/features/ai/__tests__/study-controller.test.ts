@@ -112,7 +112,8 @@ describe('StudyController', () => {
 
   it('falls back to LocalProvider when quota is exceeded', async () => {
     const { countRequests } = await import('../audit-log');
-    vi.mocked(countRequests).mockResolvedValue(200);
+    // Use Once so the implementation reverts to the default (0) for subsequent tests.
+    vi.mocked(countRequests).mockResolvedValueOnce(200);
 
     const { response } = await collectChunks(controller.stream(makeRequest()));
     expect(response.provider).toBe('local');

@@ -18,6 +18,10 @@ export default defineConfig({
       // Pin all `fflate` resolutions to the app's copy to keep js-mdict
       // self-contained at the source-tree level.
       fflate: path.resolve(__dirname, 'node_modules/fflate'),
+      // enhanced/ tests live outside apps/readest-app; pin uuid to this app's copy.
+      uuid: path.resolve(__dirname, 'node_modules/uuid'),
+      // same for idb used by enhanced/features/eudic and ai modules.
+      idb: path.resolve(__dirname, 'node_modules/idb'),
     },
   },
   test: {
