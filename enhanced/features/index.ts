@@ -14,3 +14,6 @@ export {};
 
 // Eudic vocabulary collection
 export * from './eudic';
+
+// AI study assistant
+export * from './ai';
