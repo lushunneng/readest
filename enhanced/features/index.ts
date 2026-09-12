@@ -17,3 +17,6 @@ export * from './eudic';
 
 // AI study assistant
 export * from './ai';
+
+// Inline bilingual translation (experimental, default OFF)
+export * from './inline';
