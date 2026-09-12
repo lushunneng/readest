@@ -11,3 +11,6 @@
  */
 
 export {};
+
+// Eudic vocabulary collection
+export * from './eudic';
