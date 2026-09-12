@@ -24,6 +24,13 @@ export default defineConfig({
     environment: 'jsdom',
     silent: 'passed-only',
     setupFiles: ['./vitest.setup.ts'],
+    include: [
+      // Default: app source tests
+      'src/**/*.{test,spec}.?(c|m)[jt]s?(x)',
+      // Enhanced feature tests live outside apps/readest-app
+      path.resolve(__dirname, '../../enhanced') + '/**/*.{test,spec}.?(c|m)[jt]s?(x)',
+      path.resolve(__dirname, '../../enhanced') + '/**/__tests__/**/*.{test,spec}.?(c|m)[jt]s?(x)',
+    ],
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
