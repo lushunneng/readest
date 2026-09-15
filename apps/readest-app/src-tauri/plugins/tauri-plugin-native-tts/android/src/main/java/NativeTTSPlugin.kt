@@ -37,7 +37,11 @@ import java.net.URL
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.ApplicationInfo
+import android.webkit.WebView
 import android.os.Build
 import android.os.IBinder
 import android.net.Uri
@@ -178,6 +182,52 @@ class NativeTTSPlugin(private val activity: Activity) : Plugin(activity) {
         shutdownTTSEngine()
     }
 
+    // V1-Gate harness. The 50 cold-start runs need a repeatable trigger that
+    // does not depend on a human tap, so a debuggable build exposes one
+    // namespaced broadcast that speaks text handed to it. Guarded on
+    // FLAG_DEBUGGABLE: release builds never register it, and it reads nothing
+    // from the app beyond the text in the intent.
+    private var gateReceiver: BroadcastReceiver? = null
+
+    override fun load(webView: WebView) {
+        super.load(webView)
+
+        val debuggable = (activity.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        if (!debuggable) return
+
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                val text = intent?.getStringExtra("text")
+                if (text.isNullOrEmpty()) {
+                    Log.w(TAG, "V1_GATE broadcast ignored: no text extra")
+                    return
+                }
+                Log.i(
+                    TAG,
+                    "V1_GATE TTS_SPEAK_REQUESTED utterance_len=${text.length} ts=${System.currentTimeMillis()}"
+                )
+                cancelIdleTimer()
+                coroutineScope.launch {
+                    if (!isInitialized.get()) {
+                        if (!initializeTTS()) {
+                            Log.e(TAG, "V1_GATE TTS_INIT_FAILED ts=${System.currentTimeMillis()}")
+                            return@launch
+                        }
+                    }
+                    speakText(text, UUID.randomUUID().toString(), false)
+                }
+            }
+        }
+        gateReceiver = receiver
+        ContextCompat.registerReceiver(
+            activity,
+            receiver,
+            IntentFilter("com.bilingify.readest.V1_GATE_SPEAK"),
+            ContextCompat.RECEIVER_EXPORTED
+        )
+        Log.i(TAG, "V1_GATE harness receiver registered")
+    }
+
     @Command
     fun init(invoke: Invoke) {
         cancelIdleTimer()
@@ -227,6 +277,8 @@ class NativeTTSPlugin(private val activity: Activity) : Plugin(activity) {
         textToSpeech?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String?) {
                 utteranceId?.let { id ->
+                    // V1-Gate timing: first audio frame delivered to the TTS engine.
+                    Log.i(TAG, "V1_GATE TTS_AUDIO_START ts=${System.currentTimeMillis()}")
                     isSpeaking.set(true)
                     sendEvent(id, TTSMessageEvent("boundary", "start"))
                 }
@@ -276,6 +328,10 @@ class NativeTTSPlugin(private val activity: Activity) : Plugin(activity) {
             invoke.reject("Text cannot be empty")
             return
         }
+
+        // V1-Gate timing: log the moment synthesis is requested so cold-start
+        // latency can be measured as the delta to TTS_AUDIO_START below.
+        Log.i(TAG, "V1_GATE TTS_SPEAK_REQUESTED utterance_len=${text.length} ts=${System.currentTimeMillis()}")
 
         val utteranceId = UUID.randomUUID().toString()
 

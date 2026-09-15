@@ -17,6 +17,16 @@
     <!-- AndroidTV support -->
     <uses-feature android:name="android.software.leanback" android:required="false" />
 
+    <!-- Android 11+ package visibility: TextToSpeech resolves and binds to an
+         engine service by intent. Without this declaration the engine is
+         invisible to us and the TextToSpeech onInit callback never fires at
+         all — neither SUCCESS nor ERROR — so native TTS silently never speaks. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+
     <application
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"

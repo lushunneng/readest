@@ -54,3 +54,11 @@ tauri = { path = "packages/tauri/crates/tauri" }
 # without that cargo cannot unify swift-rs and silently drops the tauri patch
 # above in favour of crates.io tauri. See packages/swift-rs.
 swift-rs = { path = "packages/swift-rs" }
+# turso_ext 0.6.1's build.rs guards its advapi32 link with
+# `cfg!(target_os = "windows")`. Build scripts are compiled for and run on the
+# HOST, so that check reports the host OS and leaks
+# `cargo:rustc-link-lib=advapi32` into an Android link line when
+# cross-compiling from Windows (`ld.lld: unable to find library -ladvapi32`).
+# The patched copy reads CARGO_CFG_TARGET_OS, which Cargo sets to the OS
+# actually being targeted.
+turso_ext = { path = "patches/turso_ext-0.6.1" }
