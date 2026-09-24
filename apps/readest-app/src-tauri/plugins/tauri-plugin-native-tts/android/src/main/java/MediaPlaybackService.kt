@@ -564,7 +564,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
     private fun showNotification(playbackState: Int) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(CHANNEL_ID, "Media Controls", NotificationManager.IMPORTANCE_LOW)
+            val channel = NotificationChannel(CHANNEL_ID, "Media Controls", NotificationManager.IMPORTANCE_DEFAULT)
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
         // Promote with an explicit mediaPlayback type (required/robust on
