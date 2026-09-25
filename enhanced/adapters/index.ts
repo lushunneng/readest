@@ -8,3 +8,7 @@
  */
 
 export {};
+
+export * from './platform/types';
+export * from './platform/registry';
+export * from './platform/gateway-provider';

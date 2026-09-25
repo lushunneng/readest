@@ -13,8 +13,7 @@ import type { PlatformProvider, PlatformCapability, PlatformTier } from './types
 /**
  * Platform registry interface
  *
- * Phase 0: Interface skeleton only. Actual provider implementations
- * will be registered by agent-import-platform.
+ * Providers may be backed by the OAuth gateway or a public-content adapter.
  */
 export interface PlatformRegistry {
   /**
@@ -52,7 +51,7 @@ export interface PlatformRegistry {
 /**
  * In-memory platform registry implementation
  *
- * Phase 0: Empty registry. Providers will be added in implementation phase.
+ * In-memory registry used by the client bootstrap.
  */
 class InMemoryPlatformRegistry implements PlatformRegistry {
   private providers: Map<string, PlatformProvider> = new Map();
@@ -66,7 +65,9 @@ class InMemoryPlatformRegistry implements PlatformRegistry {
   }
 
   listAvailablePlatforms(tier?: PlatformTier): PlatformCapability[] {
-    const capabilities = Array.from(this.providers.values()).map((p) => p.capability);
+    const capabilities = Array.from(this.providers.values())
+      .map((p) => p.capability)
+      .filter((c) => c.status === 'available');
 
     if (tier) {
       return capabilities.filter((c) => c.tier === tier);

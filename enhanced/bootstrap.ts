@@ -33,7 +33,15 @@ export interface EnhancedConfig {
     speech?: SpeechPort;
     learning?: LearningRepository;
   };
+
+  /** Optional feature setup hooks supplied by the integration layer. */
+  initializers?: Partial<Record<EnhancedFeature, FeatureInitializer>>;
 }
+
+export type EnhancedFeature = keyof NonNullable<EnhancedConfig['features']>;
+export type FeatureInitializer = (
+  registerCleanup: typeof registerCleanup,
+) => void | (() => void | Promise<void>) | Promise<void | (() => void | Promise<void>)>;
 
 /**
  * Enhanced features container
@@ -47,6 +55,7 @@ interface EnhancedContainer {
     learning?: LearningRepository;
   };
   cleanup: Array<() => void | Promise<void>>;
+  enabledFeatures: ReadonlySet<EnhancedFeature>;
   initialized: boolean;
 }
 
@@ -73,6 +82,7 @@ export async function initializeEnhanced(config: EnhancedConfig): Promise<void> 
   container = {
     ports: {},
     cleanup: [],
+    enabledFeatures: new Set<EnhancedFeature>(),
     initialized: true,
   };
 
@@ -93,23 +103,25 @@ export async function initializeEnhanced(config: EnhancedConfig): Promise<void> 
   // Initialize features based on flags
   const features = config.features || {};
 
-  // Feature initialization will be implemented by feature-specific agents
-  // For now, this is just a skeleton that validates the structure
+  // Keep feature state in the container so callers can make decisions without
+  // retaining a second, potentially stale configuration object.
+  const enabledFeatures = Object.entries(features)
+    .filter((entry): entry is [EnhancedFeature, true] => entry[1] === true)
+    .map(([name]) => name);
+  container.enabledFeatures = new Set(enabledFeatures);
 
-  if (features.importPlatform) {
-    // TODO: Initialize import-platform feature (agent-platform-foundation)
-  }
-
-  if (features.eudic) {
-    // TODO: Initialize Eudic integration (agent-v2-learn)
-  }
-
-  if (features.translate) {
-    // TODO: Initialize translation services (agent-v3-translate)
-  }
-
-  if (features.tts) {
-    // TODO: Initialize enhanced TTS (agent-v1-audio)
+  // Feature modules register their own resources through registerCleanup.
+  // Only explicitly enabled features are initialized.
+  try {
+    for (const feature of enabledFeatures) {
+      const initializer = config.initializers?.[feature];
+      if (!initializer) continue;
+      const cleanup = await initializer(registerCleanup);
+      if (cleanup) registerCleanup(cleanup);
+    }
+  } catch (error) {
+    await shutdownEnhanced();
+    throw error;
   }
 }
 
@@ -130,16 +142,15 @@ export async function shutdownEnhanced(): Promise<void> {
   }
 
   // Execute all cleanup handlers
-  const cleanupPromises = container.cleanup.map(async (cleanup) => {
+  const cleanupHandlers = [...container.cleanup].reverse();
+  for (const cleanup of cleanupHandlers) {
     try {
       await cleanup();
     } catch (error) {
       // Log but don't throw - we want to clean up as much as possible
       console.error('Enhanced cleanup error:', error);
     }
-  });
-
-  await Promise.all(cleanupPromises);
+  }
 
   // Reset container
   container = null;
@@ -179,16 +190,11 @@ export function registerCleanup(cleanup: () => void | Promise<void>): void {
 }
 
 /**
- * Check if a feature is enabled
- *
- * This is a placeholder - actual feature flag checking will be implemented
- * by feature-specific agents as they add their initialization code.
+ * Check if a feature is enabled for the current enhanced session.
  *
  * @param featureName - Name of the feature to check
  * @returns true if feature is enabled
  */
 export function isFeatureEnabled(featureName: string): boolean {
-  // TODO: Implement feature flag checking
-  // For now, return false to ensure safe fallback behavior
-  return false;
+  return container?.enabledFeatures.has(featureName as EnhancedFeature) ?? false;
 }
