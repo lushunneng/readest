@@ -203,3 +203,13 @@ Offline probe: Wi-Fi was disabled through adb, an explicit package-scoped V1_GAT
 Process-reclaim probe: Readest was force-stopped and cold-launched. The V1_GATE receiver registered again after restart, but the follow-up broadcast did not produce TTS markers in the captured window. This case remains pending and is not counted as a pass.
 
 Bluetooth disconnect/reconnect and the required 30-minute lock-screen run remain pending manual evidence.
+
+---
+
+## Follow-up: Bluetooth and Process-Reclaim Audit (2026-09-26)
+
+Bluetooth probe: Bluetooth was disabled and restored successfully. The package-scoped V1_GATE broadcast did not produce TTS markers while Bluetooth was disabled, so Bluetooth playback is not marked passed.
+
+Process-reclaim audit: after force-stop and cold launch, the app process restarted and logged , but the subsequent explicit broadcast produced no TTS markers and no foreground service activation. Process-reclaim recovery therefore remains a failure/pending fix.
+
+Device state after testing: Bluetooth restored to enabled; Wi-Fi remains enabled.
