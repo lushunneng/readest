@@ -278,6 +278,19 @@ export class TranslationCache {
     });
   }
 
+  /** Remove all entries. Primarily useful for test isolation and sign-out. */
+  async clearAll(): Promise<void> {
+    await this.init();
+    if (!this.db) throw new Error('Database not initialized');
+    await new Promise<void>((resolve, reject) => {
+      const request = this.db!.transaction([STORE_NAME], 'readwrite')
+        .objectStore(STORE_NAME)
+        .clear();
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(new Error('Failed to clear cache'));
+    });
+  }
+
   /**
    * Get cache statistics
    */

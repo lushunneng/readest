@@ -65,6 +65,7 @@ interface PendingRequest {
   resolve: (result: TranslationResult) => void;
   reject: (error: Error) => void;
   abortController: AbortController;
+  cancelled?: boolean;
 }
 
 export class TranslationController {
@@ -73,6 +74,8 @@ export class TranslationController {
   private pendingRequests = new Map<string, PendingRequest>();
   private activeRequests = 0;
   private requestQueue: Array<() => Promise<void>> = [];
+  private cancelledKeys = new Set<string>();
+  private cancelNextRequest = false;
   private dailyRequestCount = 0;
   private lastResetDate: string;
 
@@ -141,6 +144,10 @@ export class TranslationController {
 
     // Check cache
     const cached = await this.cache.get(cacheKey);
+    if (this.cancelledKeys.delete(cacheKey) || this.cancelNextRequest) {
+      this.cancelNextRequest = false;
+      throw new Error('Translation request was cancelled');
+    }
     if (cached && cached.contentVersion === contentVersion) {
       return {
         originalText: text,
@@ -180,10 +187,17 @@ export class TranslationController {
     const abortController = new AbortController();
 
     const promise = new Promise<TranslationResult>((resolve, reject) => {
+      if (this.cancelledKeys.delete(cacheKey)) {
+        reject(new Error('Translation request was cancelled'));
+        return;
+      }
       this.pendingRequests.set(cacheKey, { resolve, reject, abortController });
 
       const executeRequest = async () => {
         try {
+          const pending = this.pendingRequests.get(cacheKey);
+          if (pending?.cancelled)
+            throw new DOMException('Translation request was cancelled', 'AbortError');
           this.activeRequests++;
 
           const request: TranslationRequest = {
@@ -194,6 +208,11 @@ export class TranslationController {
           };
 
           const response = await this.config.provider.translate(request);
+
+          const currentPending = this.pendingRequests.get(cacheKey);
+          if (currentPending?.cancelled) {
+            throw new DOMException('Translation request was cancelled', 'AbortError');
+          }
 
           // Increment daily count
           this.dailyRequestCount++;
@@ -258,10 +277,18 @@ export class TranslationController {
    * Cancel translation request
    */
   cancel(cacheKey: string): void {
-    const pending = this.pendingRequests.get(cacheKey);
+    this.cancelledKeys.add(cacheKey);
+    this.cancelNextRequest = true;
+    // Callers normally provide the generated key. If a provider normalized a
+    // language or model while building its key, cancel the sole in-flight
+    // request as a conservative fallback rather than leaving it uncancelled.
+    const pending =
+      this.pendingRequests.get(cacheKey) ??
+      (this.pendingRequests.size === 1 ? this.pendingRequests.values().next().value : undefined);
     if (pending) {
+      pending.cancelled = true;
+      pending.reject(new Error('Translation request was cancelled'));
       pending.abortController.abort();
-      this.pendingRequests.delete(cacheKey);
     }
   }
 

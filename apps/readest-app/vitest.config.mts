@@ -7,6 +7,14 @@ export default defineConfig({
   plugins: [tsconfigPaths(), react()],
   resolve: {
     alias: {
+      // Enhanced tests are outside the app source tree but reuse app services.
+      // Keep the @ alias explicit so Vite resolves those imports consistently.
+      '@': path.resolve(__dirname, 'src'),
+      // Enhanced import tests resolve dependencies from the app workspace.
+      '@mozilla/readability': path.resolve(__dirname, 'node_modules/@mozilla/readability'),
+      dompurify: path.resolve(__dirname, 'node_modules/dompurify'),
+      'js-md5': path.resolve(__dirname, 'node_modules/js-md5'),
+      jsdom: path.resolve(__dirname, 'node_modules/jsdom'),
       // The @pdfjs alias from tsconfig only resolves within the app's own
       // source files.  foliate-js/pdf.js lives outside that scope, so Vite
       // needs an explicit alias to find the vendored pdfjs build.
@@ -26,6 +34,7 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    globals: true,
     silent: 'passed-only',
     setupFiles: ['./vitest.setup.ts'],
     include: [
@@ -46,6 +55,8 @@ export default defineConfig({
       '**/*.tauri.test.ts',
       // Android device e2e — run via `pnpm test:android`, not the unit lane.
       '**/*.android.test.ts',
+      // This file is an executable Gate harness, not a Vitest suite.
+      '**/features/tts/gate-validation.test.ts',
     ],
     coverage: {
       provider: 'v8',

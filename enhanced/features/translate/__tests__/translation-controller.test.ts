@@ -12,6 +12,7 @@ import type {
   TranslationResponse,
 } from '../translation-provider';
 import { LocalProvider } from '../translation-provider';
+import { getTranslationCache } from '../translation-cache';
 
 // Mock ReaderPort
 const createMockReaderPort = (): ReaderPort => ({
@@ -46,7 +47,8 @@ describe('TranslationController', () => {
   let provider: TranslationProvider;
   let controller: TranslationController;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    await getTranslationCache().clearAll();
     readerPort = createMockReaderPort();
     provider = createMockProvider();
     controller = new TranslationController(readerPort, {

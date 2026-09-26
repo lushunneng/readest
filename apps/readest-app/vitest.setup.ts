@@ -1,6 +1,15 @@
 // jsdom does not implement the CSS namespace; foliate-js TTS uses CSS.escape
 // (mark[name="…"] lookups). Provide the standard polyfill so those paths work.
 const globalWithCSS = globalThis as { CSS?: { escape?: (value: string) => string } };
+
+// jsdom does not provide IndexedDB. Enhanced translation tests use the same
+// browser API as production, backed by fake-indexeddb for deterministic tests.
+import 'fake-indexeddb/auto';
+
+// The checked-in .env contains encoded defaults for production builds. Tests
+// use harmless local values so optional Supabase imports remain loadable.
+process.env['SUPABASE_URL'] = 'https://test.supabase.local';
+process.env['SUPABASE_ANON_KEY'] = 'test-anon-key';
 if (!globalWithCSS.CSS) globalWithCSS.CSS = {};
 if (typeof globalWithCSS.CSS.escape !== 'function') {
   globalWithCSS.CSS.escape = (value: string): string => {
