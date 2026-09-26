@@ -4,8 +4,10 @@
  * Implementation per v5-report.md recommendations:
  * - Exponential backoff retry (3 attempts, 1s/2s/4s)
  * - 409/400 treated as "already exists"
- * - Token from environment variable
+ * - Token from constructor, app-local storage, or environment variable
  */
+
+import { getStoredEudicToken } from './token-storage';
 
 export interface EudicWord {
   word: string;
@@ -38,15 +40,24 @@ export class EudicApiClient {
   private readonly maxConsecutiveFailures = 3;
 
   constructor(token?: string) {
-    // Token from constructor or environment variable
-    this.token = token || this.getTokenFromEnv();
+    this.token = token?.trim() || getStoredEudicToken() || this.getTokenFromEnv();
+  }
+
+  /** Replace the token at runtime after the user edits app settings. */
+  setToken(token: string | null): void {
+    this.token = token?.trim() || null;
+    this.resetDegradedState();
+  }
+
+  clearToken(): void {
+    this.setToken(null);
   }
 
   private getTokenFromEnv(): string | null {
     // In browser environment, this would come from settings/config
     // In Node.js, from process.env
     if (typeof process !== 'undefined' && process.env) {
-      return process.env.EUDIC_TOKEN || null;
+      return process.env['EUDIC_TOKEN'] || null;
     }
     return null;
   }
@@ -56,6 +67,22 @@ export class EudicApiClient {
    */
   isConfigured(): boolean {
     return this.token !== null && this.token.length > 0;
+  }
+
+  /** Lightweight credential check used by the settings UI. */
+  async checkConnection(): Promise<void> {
+    if (!this.isConfigured()) {
+      throw this.createError('EUDIC_TOKEN not configured', 401, 'NOT_CONFIGURED');
+    }
+    const response = await fetch(`${API_BASE_URL}/studylist/category`, {
+      headers: { Authorization: `Bearer ${this.token}` },
+    });
+    if (response.status === 401 || response.status === 403) {
+      throw this.createError('Authentication failed', response.status, 'AUTH_FAILED');
+    }
+    if (!response.ok) {
+      throw this.createError('Unable to reach Eudic API', response.status, 'API_ERROR');
+    }
   }
 
   /**

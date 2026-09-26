@@ -8,6 +8,7 @@ export { EudicVocabularyRepository } from './vocabulary-repository';
 export { VocabularyCsvExporter } from './csv-exporter';
 export { VocabularyStorage, generateId } from './local-storage';
 export { EudicApiClient } from './eudic-api-client';
+export { getStoredEudicToken, setStoredEudicToken, clearStoredEudicToken } from './token-storage';
 export { VocabularySyncQueue } from './sync-queue';
 
 export type { LocalVocabularyItem } from './local-storage';

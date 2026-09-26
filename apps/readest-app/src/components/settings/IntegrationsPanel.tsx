@@ -19,6 +19,7 @@ import {
   RiMicrosoftLine,
   RiAppleLine,
   RiHeadphoneLine,
+  RiBookmarkLine,
 } from 'react-icons/ri';
 import { useEnv } from '@/context/EnvContext';
 import { useAuth } from '@/context/AuthContext';
@@ -52,6 +53,7 @@ import WebDAVForm from './integrations/WebDAVForm';
 import GoogleDriveForm from './integrations/GoogleDriveForm';
 import OneDriveForm from './integrations/OneDriveForm';
 import ICloudForm from './integrations/ICloudForm';
+import EudicForm from './integrations/EudicForm';
 import S3Form from './integrations/S3Form';
 import { persistCloudProviderEnabled } from './integrations/cloudSync';
 import {
@@ -88,6 +90,7 @@ type SubPage =
   | 'audiobookshelf'
   | 'send'
   | 'localsend'
+  | 'eudic'
   | null;
 
 /**
@@ -220,6 +223,7 @@ const IntegrationsPanel: React.FC = () => {
       requestedSubPage === 'icloud' ||
       requestedSubPage === 'readwise' ||
       requestedSubPage === 'hardcover' ||
+      requestedSubPage === 'eudic' ||
       requestedSubPage === 'notion' ||
       requestedSubPage === 'opds' ||
       requestedSubPage === 'audiobookshelf' ||
@@ -456,6 +460,12 @@ const IntegrationsPanel: React.FC = () => {
         <NotionForm onBack={() => setSubPage(null)} />
       </div>
     );
+  if (subPage === 'eudic')
+    return (
+      <div className='my-4 w-full'>
+        <EudicForm onBack={() => setSubPage(null)} />
+      </div>
+    );
   if (subPage === 'opds')
     return (
       <div className='my-4 w-full'>
@@ -495,6 +505,10 @@ const IntegrationsPanel: React.FC = () => {
 
   const readwiseStatus = settings.readwise?.enabled ? _('Connected') : _('Not connected');
   const hardcoverStatus = settings.hardcover?.enabled ? _('Connected') : _('Not connected');
+  const eudicStatus =
+    typeof localStorage !== 'undefined' && localStorage.getItem('readest:eudic-token')
+      ? _('Token configured')
+      : _('Not configured');
   const notionStatus =
     settings.notion?.enabled && settings.notion.accessToken && settings.notion.databaseId
       ? _('Connected')
@@ -634,6 +648,12 @@ const IntegrationsPanel: React.FC = () => {
               title={_('Notion')}
               status={notionStatus}
               onClick={() => setSubPage('notion')}
+            />
+            <IntegrationRow
+              icon={RiBookmarkLine}
+              title={_('Eudic')}
+              status={eudicStatus}
+              onClick={() => setSubPage('eudic')}
             />
           </div>
         </div>

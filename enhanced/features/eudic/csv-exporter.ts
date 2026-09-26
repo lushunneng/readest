@@ -119,7 +119,7 @@ export class VocabularyCsvExporter {
         continue; // Invalid row
       }
 
-      const [word, definition, context, bookTitle, cfi, addedAtStr, syncStatus] = cells;
+      const [word = '', definition, context, bookTitle, cfi, addedAtStr = '', syncStatus] = cells;
 
       items.push({
         word: word.toLowerCase().trim(),
@@ -135,7 +135,10 @@ export class VocabularyCsvExporter {
               }
             : undefined,
         addedAt: new Date(addedAtStr).getTime(),
-        syncStatus: (syncStatus as any) || 'unknown',
+        syncStatus:
+          syncStatus === 'pending' || syncStatus === 'synced' || syncStatus === 'failed'
+            ? syncStatus
+            : 'unknown',
         retryCount: 0,
       });
     }

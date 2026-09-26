@@ -6,7 +6,6 @@
  */
 
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
-import type { VocabularyItem } from '../../core/models';
 
 /**
  * Local vocabulary item with sync metadata

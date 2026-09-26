@@ -12,7 +12,9 @@
 
 ## Executive Summary
 
-**Result:** ❌ **FAIL (OriginOS background restrictions)**
+**Result:** ⚠️ **SKIPPED_BY_USER (OriginOS failure evidence retained)**
+
+The user explicitly instructed the project to skip the V1 physical-device verification and continue the remaining work. This report remains the evidence record for the previously attempted run; it is not a passing V1 result. The adopted product path is foreground playback, with pre-download and pure-reading fallbacks.
 
 **Findings:**
 - **Ideal-case latency: 1.1-2.1 seconds** — well below the 15s threshold
@@ -109,7 +111,7 @@ Each of 35 runs (stopped early due to systematic failure):
 
 ## Conclusion
 
-**V1 Gate verdict:** ❌ **FAIL**
+**V1 Gate verdict:** ⚠️ **SKIPPED_BY_USER**
 
 While ideal-case latency is excellent (1.1-2.1s, p95 well under 15s), OriginOS background restrictions make native TTS unusable for the app's real-world use case (continuous reading sessions with repeated segment synthesis).
 

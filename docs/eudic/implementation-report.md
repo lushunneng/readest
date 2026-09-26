@@ -154,11 +154,11 @@ Max attempts: 3
 
 ### 4. Token Security (v5-report.md Section 7)
 
-**Injection Method**: Environment variable `EUDIC_TOKEN`
+**Injection Method**: App-local Integrations → Eudic token field (with `EUDIC_TOKEN` retained as a headless fallback)
 
 ```typescript
 constructor(token?: string) {
-  this.token = token || process.env.EUDIC_TOKEN || null;
+  this.token = token || appLocalEudicToken || process.env.EUDIC_TOKEN || null;
 }
 ```
 
