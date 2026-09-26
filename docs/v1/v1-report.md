@@ -161,3 +161,20 @@ So real users likely hear **Edge TTS** (WebSocket to Microsoft's service), not t
 **Report generated:** 2026-09-15 20:50 UTC+8  
 **Tested by:** Claude Opus 5 + lsn  
 **Device operator:** lsn
+
+---
+
+## Follow-up: Foreground Playback Cold-Start Verification (2026-09-26)
+
+Device V2463A, Android 16. Raw evidence: v1-cold-starts.csv, commit 76724b820.
+
+| Metric | Result | Gate |
+|---|---:|---:|
+| Cold starts | 50 | 50 required |
+| Successful starts | 50/50 (100%) | >=95% |
+| p50 | 582 ms | <=15,000 ms |
+| p90 | 693 ms | informational |
+| p95 | 705 ms | <=15,000 ms |
+| Maximum | 799 ms | informational |
+
+The remaining V1 evidence matrix still needs explicit records for 30-minute lock-screen playback, notification controls, Bluetooth disconnect/reconnect, offline playback, process reclaim, and OriginOS background behavior. Overall V1 remains pending until these cases are recorded.
