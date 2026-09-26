@@ -62,3 +62,6 @@ swift-rs = { path = "packages/swift-rs" }
 # The patched copy reads CARGO_CFG_TARGET_OS, which Cargo sets to the OS
 # actually being targeted.
 turso_ext = { path = "patches/turso_ext-0.6.1" }
+# SimSIMD's build script produces a static archive; use the local patch so
+# Android links that archive instead of looking for a shared library.
+simsimd = { path = "patches/simsimd-6.5.16" }
