@@ -193,3 +193,13 @@ Using the debuggable arm64 APK and an explicit package-scoped V1_GATE broadcast:
 - The foreground service remained registered after the probe.
 
 Bluetooth, offline playback, process reclaim, and the 30-minute lock-screen run remain pending manual/device evidence.
+
+---
+
+## Follow-up: Offline and Process-Reclaim Probes (2026-09-26)
+
+Offline probe: Wi-Fi was disabled through adb, an explicit package-scoped V1_GATE broadcast was sent, and both TTS_SPEAK_REQUESTED and TTS_AUDIO_START were observed. Wi-Fi was restored and verified on afterward.
+
+Process-reclaim probe: Readest was force-stopped and cold-launched. The V1_GATE receiver registered again after restart, but the follow-up broadcast did not produce TTS markers in the captured window. This case remains pending and is not counted as a pass.
+
+Bluetooth disconnect/reconnect and the required 30-minute lock-screen run remain pending manual evidence.
