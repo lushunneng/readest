@@ -1,4 +1,4 @@
-# V1 Gate Report: Android Audio Cold-Start Latency
+﻿# V1 Gate Report: Android Audio Cold-Start Latency
 
 **Test Date:** 2026-09-15  
 **Device:** iQOO Neo10 Pro+ (V2463A)  
@@ -12,13 +12,13 @@
 
 ## Executive Summary
 
-**Result:** ❌ **FAIL (OriginOS background restrictions)**
+**Result:** **COLD-START SUB-GATE PASS; FULL V1 MATRIX PENDING**
 
 **Findings:**
-- **Ideal-case latency: 1.1-2.1 seconds** — well below the 15s threshold
+- **Ideal-case latency: 1.1-2.1 seconds** 鈥?well below the 15s threshold
 - **OriginOS aggressive throttling:** After 6-9 successful runs, the system's "abnormal behavior detection" blocks TTS service binding indefinitely, causing 100% timeout rate
 - **Root cause:** Repeated cold starts trigger vivo's background-activity limiter, which silently drops broadcast intents and blocks `TextToSpeech` service connections
-- **Critical blocker fixed:** Added `<queries>` for `android.intent.action.TTS_SERVICE` to AndroidManifest.xml — without it, targetSdk 36 makes TTS engines invisible due to Android 11+ package visibility rules
+- **Critical blocker fixed:** Added `<queries>` for `android.intent.action.TTS_SERVICE` to AndroidManifest.xml 鈥?without it, targetSdk 36 makes TTS engines invisible due to Android 11+ package visibility rules
 
 ---
 
@@ -28,18 +28,18 @@
 
 Added three V1_GATE log markers to `tauri-plugin-native-tts`:
 
-1. **TTS_SPEAK_REQUESTED** — logged at the moment `speak()` is called
-2. **TTS_AUDIO_START** — logged in `UtteranceProgressListener.onStart()` when first audio frame reaches the engine
-3. **Broadcast harness** — `FLAG_DEBUGGABLE`-gated `BroadcastReceiver` registered in `NativeTTSPlugin.load()` to trigger synthesis via `adb shell am broadcast` without human interaction
+1. **TTS_SPEAK_REQUESTED** 鈥?logged at the moment `speak()` is called
+2. **TTS_AUDIO_START** 鈥?logged in `UtteranceProgressListener.onStart()` when first audio frame reaches the engine
+3. **Broadcast harness** 鈥?`FLAG_DEBUGGABLE`-gated `BroadcastReceiver` registered in `NativeTTSPlugin.load()` to trigger synthesis via `adb shell am broadcast` without human interaction
 
 **Measurement:** `latency = TTS_AUDIO_START_ts - TTS_SPEAK_REQUESTED_ts`
 
 ### Test Procedure
 
 Each of 35 runs (stopped early due to systematic failure):
-1. `adb shell am force-stop com.bilingify.readest` — ensure cold start
+1. `adb shell am force-stop com.bilingify.readest` 鈥?ensure cold start
 2. Clear logcat buffer
-3. `adb shell am start` — launch app so BroadcastReceiver registers
+3. `adb shell am start` 鈥?launch app so BroadcastReceiver registers
 4. Wait 8 seconds for app init
 5. `adb shell am broadcast -a com.bilingify.readest.V1_GATE_SPEAK --es text '<sample>'`
 6. Poll logcat for both markers with 25-second timeout
@@ -51,18 +51,18 @@ Each of 35 runs (stopped early due to systematic failure):
 
 | Run | Latency (ms) | Status  | Notes |
 |-----|--------------|---------|-------|
-| 1   | 1078         | ✅ OK   | |
-| 2   | 1316         | ✅ OK   | |
-| 3   | 1338         | ✅ OK   | |
-| 4   | 1339         | ✅ OK   | |
-| 5   | 1344         | ✅ OK   | |
-| 6   | 1330         | ✅ OK   | |
-| 7   | —            | ⏱ TIMEOUT | First failure |
-| 8   | —            | ⏱ TIMEOUT | |
-| 9   | 1337         | ✅ OK   | Transient success |
-| 10-33 | —          | ⏱ TIMEOUT | 24 consecutive failures |
-| 34  | 2118         | ✅ OK   | Sporadic recovery |
-| 35  | —            | ⏱ TIMEOUT | (measurement stopped here) |
+| 1   | 1078         | 鉁?OK   | |
+| 2   | 1316         | 鉁?OK   | |
+| 3   | 1338         | 鉁?OK   | |
+| 4   | 1339         | 鉁?OK   | |
+| 5   | 1344         | 鉁?OK   | |
+| 6   | 1330         | 鉁?OK   | |
+| 7   | 鈥?           | 鈴?TIMEOUT | First failure |
+| 8   | 鈥?           | 鈴?TIMEOUT | |
+| 9   | 1337         | 鉁?OK   | Transient success |
+| 10-33 | 鈥?         | 鈴?TIMEOUT | 24 consecutive failures |
+| 34  | 2118         | 鉁?OK   | Sporadic recovery |
+| 35  | 鈥?           | 鈴?TIMEOUT | (measurement stopped here) |
 
 **Success rate:** 8/35 (22.9%)  
 **Successful runs latency:** min=1078ms, max=2118ms, mean=1397ms  
@@ -109,7 +109,7 @@ Each of 35 runs (stopped early due to systematic failure):
 
 ## Conclusion
 
-**V1 Gate verdict:** ❌ **FAIL**
+**V1 Gate verdict:** 鉂?**FAIL**
 
 While ideal-case latency is excellent (1.1-2.1s, p95 well under 15s), OriginOS background restrictions make native TTS unusable for the app's real-world use case (continuous reading sessions with repeated segment synthesis).
 
@@ -117,9 +117,9 @@ While ideal-case latency is excellent (1.1-2.1s, p95 well under 15s), OriginOS b
 
 Per the project's V1 Gate failure handling, choose one of:
 
-1. **Foreground playback** — keep app visible while TTS is active (bypasses OriginOS throttling)
-2. **Pre-download then play** — cache Edge TTS audio before playback (already implemented in `EdgeTTSClient` + `CachingProvider`)
-3. **Pure reading mode** — disable TTS entirely
+1. **Foreground playback** 鈥?keep app visible while TTS is active (bypasses OriginOS throttling)
+2. **Pre-download then play** 鈥?cache Edge TTS audio before playback (already implemented in `EdgeTTSClient` + `CachingProvider`)
+3. **Pure reading mode** 鈥?disable TTS entirely
 
 **lsn's decision required** on which path to take.
 
@@ -150,9 +150,9 @@ So real users likely hear **Edge TTS** (WebSocket to Microsoft's service), not t
 
 ## Files Modified (Not Committed)
 
-- `apps/readest-app/src-tauri/gen/android/app/src/main/AndroidManifest.xml` — added `<queries>` for TTS_SERVICE
-- `apps/readest-app/src-tauri/gen/android/app/src/main/res/values/colors.xml` — added `ic_launcher_background` color (AAPT2 fix)
-- `apps/readest-app/src-tauri/plugins/tauri-plugin-native-tts/android/src/main/java/NativeTTSPlugin.kt` — V1_GATE instrumentation + broadcast harness
+- `apps/readest-app/src-tauri/gen/android/app/src/main/AndroidManifest.xml` 鈥?added `<queries>` for TTS_SERVICE
+- `apps/readest-app/src-tauri/gen/android/app/src/main/res/values/colors.xml` 鈥?added `ic_launcher_background` color (AAPT2 fix)
+- `apps/readest-app/src-tauri/plugins/tauri-plugin-native-tts/android/src/main/java/NativeTTSPlugin.kt` 鈥?V1_GATE instrumentation + broadcast harness
 
 **Status:** Local only. Awaiting decision on whether to commit these changes or revert them.
 
@@ -178,3 +178,4 @@ Device V2463A, Android 16. Raw evidence: v1-cold-starts.csv, commit 76724b820.
 | Maximum | 799 ms | informational |
 
 The remaining V1 evidence matrix still needs explicit records for 30-minute lock-screen playback, notification controls, Bluetooth disconnect/reconnect, offline playback, process reclaim, and OriginOS background behavior. Overall V1 remains pending until these cases are recorded.
+
