@@ -11,6 +11,7 @@ import type {
   TranslationRequest,
   TranslationResponse,
 } from '../translation-provider';
+import { LocalProvider } from '../translation-provider';
 
 // Mock ReaderPort
 const createMockReaderPort = (): ReaderPort => ({
@@ -245,5 +246,38 @@ describe('TranslationController', () => {
       expect(stats).toHaveProperty('dailyRequestCount');
       expect(stats).toHaveProperty('dailyRequestLimit');
     });
+  });
+});
+
+describe('LocalProvider', () => {
+  it('sends a request to the configured local endpoint', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ translatedText: '你好', detectedSourceLang: 'en' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    const provider = new LocalProvider({
+      provider: 'local',
+      modelVersion: 'qwen2.5',
+      endpoint: 'http://127.0.0.1:11434/api/translate',
+    });
+
+    await expect(
+      provider.translate({ text: 'Hello', sourceLang: 'en', targetLang: 'zh' }),
+    ).resolves.toMatchObject({ translatedText: '你好', detectedSourceLang: 'en' });
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://127.0.0.1:11434/api/translate',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    fetchMock.mockRestore();
+  });
+
+  it('reports unavailable when no endpoint is configured', async () => {
+    const provider = new LocalProvider({ provider: 'local', modelVersion: 'local' });
+    await expect(provider.isAvailable()).resolves.toBe(false);
+    await expect(
+      provider.translate({ text: 'Hello', sourceLang: 'en', targetLang: 'zh' }),
+    ).rejects.toThrow('local translation endpoint is required');
   });
 });

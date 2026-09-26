@@ -219,17 +219,80 @@ export class OpenAIProvider implements TranslationProvider {
 }
 
 /**
- * Local Translation Provider (placeholder for future implementation)
+ * Local Translation Provider.
+ *
+ * The local provider intentionally talks to an explicitly configured local
+ * endpoint instead of pretending that the browser can translate offline. A
+ * small HTTP adapter is enough for Ollama, LocalAI, or an app-owned service.
+ * The endpoint must return `{ translatedText: string }` (or
+ * `{ translation: string }`) and may include `detectedSourceLang`.
  */
 export class LocalProvider implements TranslationProvider {
   constructor(private config: TranslationProviderConfig) {}
 
   async translate(request: TranslationRequest): Promise<TranslationResponse> {
-    throw new Error('Local translation provider not yet implemented');
+    const endpoint = this.config.endpoint?.trim();
+    if (!endpoint) {
+      throw new Error('A local translation endpoint is required');
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.config.timeout || 30000);
+    const abortRequest = () => controller.abort();
+    request.signal?.addEventListener('abort', abortRequest, { once: true });
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: request.text,
+          sourceLang: request.sourceLang,
+          targetLang: request.targetLang,
+          context: request.context,
+          model: this.config.modelVersion,
+        }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Local translation API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = (await response.json()) as {
+        translatedText?: unknown;
+        translation?: unknown;
+        detectedSourceLang?: unknown;
+      };
+      const translatedText =
+        typeof data.translatedText === 'string'
+          ? data.translatedText
+          : typeof data.translation === 'string'
+            ? data.translation
+            : null;
+
+      if (!translatedText?.trim()) {
+        throw new Error('Local translation API returned no translated text');
+      }
+
+      return {
+        translatedText,
+        detectedSourceLang:
+          typeof data.detectedSourceLang === 'string' ? data.detectedSourceLang : undefined,
+        metadata: {
+          provider: 'local',
+          modelVersion: this.config.modelVersion,
+          endpoint,
+        },
+      };
+    } finally {
+      clearTimeout(timeout);
+      request.signal?.removeEventListener('abort', abortRequest);
+    }
   }
 
   async isAvailable(): Promise<boolean> {
-    return false;
+    return Boolean(this.config.endpoint?.trim());
   }
 
   getConfig(): TranslationProviderConfig {
