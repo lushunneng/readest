@@ -10,6 +10,7 @@ import type { ArticleDocument } from '../../core/models';
 import { writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
+import { zipSync, strToU8 } from 'fflate';
 
 /**
  * Convert ArticleDocument to minimal EPUB for library import
@@ -29,8 +30,6 @@ function createMinimalEpub(
 
   const epubPath = join(tempDir, `${article.content_id}.epub`);
 
-  // Minimal EPUB structure (simplified for import)
-  // In production, use proper EPUB generation library
   const contentXhtml = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -55,9 +54,32 @@ function createMinimalEpub(
 </body>
 </html>`;
 
-  // For now, just create a marker file
-  // Full EPUB generation would be done by a proper library
-  writeFileSync(epubPath, contentXhtml, 'utf-8');
+  const containerXml = `<?xml version="1.0" encoding="UTF-8"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles>
+</container>`;
+  const packageOpf = `<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="pub-id">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:identifier id="pub-id">${escapeXml(article.content_id)}</dc:identifier>
+    <dc:title>${escapeXml(metadata.title)}</dc:title>
+    <dc:creator>${escapeXml(metadata.author || 'Readest')}</dc:creator>
+    <dc:language>en</dc:language>
+  </metadata>
+  <manifest>
+    <item id="content" href="content.xhtml" media-type="application/xhtml+xml" properties="nav"/>
+  </manifest>
+  <spine><itemref idref="content"/></spine>
+</package>`;
+
+  // EPUB requires an uncompressed mimetype entry and a standard container.
+  const epub = zipSync({
+    mimetype: [strToU8('application/epub+zip'), { level: 0 }],
+    'META-INF/container.xml': strToU8(containerXml),
+    'OEBPS/content.xhtml': strToU8(contentXhtml),
+    'OEBPS/content.opf': strToU8(packageOpf),
+  });
+  writeFileSync(epubPath, epub);
 
   return epubPath;
 }

@@ -75,8 +75,7 @@ describe('Enhanced Bootstrap', () => {
     });
 
     await shutdownEnhanced();
-    expect(cleanupOrder).toContain(1);
-    expect(cleanupOrder).toContain(2);
+    expect(cleanupOrder).toEqual([2, 1]);
   });
 
   it('should prevent double initialization', async () => {
@@ -116,10 +115,50 @@ describe('Enhanced Bootstrap', () => {
     });
 
     await shutdownEnhanced();
-    expect(cleanupOrder).toEqual([1, 3]);
+    expect(cleanupOrder).toEqual([3, 1]);
   });
 
-  it('should return false for all feature flags by default', () => {
+  it('should expose configured feature flags and reset them on shutdown', async () => {
+    await initializeEnhanced({ features: { translate: true, tts: false } });
+    expect(isFeatureEnabled('translate')).toBe(true);
+    expect(isFeatureEnabled('tts')).toBe(false);
+    expect(isFeatureEnabled('unknown')).toBe(false);
+
+    await shutdownEnhanced();
+    expect(isFeatureEnabled('translate')).toBe(false);
+  });
+
+  it('should initialize only enabled features and roll back on failure', async () => {
+    const calls: string[] = [];
+    await initializeEnhanced({
+      features: { translate: true, tts: false },
+      initializers: {
+        translate: (register) => {
+          calls.push('translate');
+          register(() => calls.push('cleanup'));
+        },
+        tts: () => calls.push('tts'),
+      },
+    });
+    expect(calls).toEqual(['translate']);
+    await shutdownEnhanced();
+    expect(calls).toEqual(['translate', 'cleanup']);
+
+    await expect(
+      initializeEnhanced({
+        features: { translate: true },
+        initializers: {
+          translate: async () => {
+            throw new Error('init failed');
+          },
+        },
+      }),
+    ).rejects.toThrow('init failed');
+    expect(isEnhancedInitialized()).toBe(false);
+  });
+
+  it('should return false for all feature flags by default', async () => {
+    await initializeEnhanced({});
     expect(isFeatureEnabled('importPlatform')).toBe(false);
     expect(isFeatureEnabled('eudic')).toBe(false);
     expect(isFeatureEnabled('translate')).toBe(false);
