@@ -179,3 +179,17 @@ Device V2463A, Android 16. Raw evidence: v1-cold-starts.csv, commit 76724b820.
 
 The remaining V1 evidence matrix still needs explicit records for 30-minute lock-screen playback, notification controls, Bluetooth disconnect/reconnect, offline playback, process reclaim, and OriginOS background behavior. Overall V1 remains pending until these cases are recorded.
 
+
+---
+
+## Follow-up: Foreground Service and Lock-Screen Probe (2026-09-26)
+
+Using the debuggable arm64 APK and an explicit package-scoped V1_GATE broadcast:
+
+-  was emitted.
+-  was emitted 63 ms later for the short probe text.
+-  was present with .
+- The Android screen keyevent probe did not transition the device to ; therefore this is not evidence for the required 30-minute lock-screen gate.
+- The foreground service remained registered after the probe.
+
+Bluetooth, offline playback, process reclaim, and the 30-minute lock-screen run remain pending manual/device evidence.
