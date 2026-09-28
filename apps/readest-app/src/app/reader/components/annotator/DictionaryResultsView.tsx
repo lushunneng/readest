@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { MdArrowBack, MdChevronRight, MdSettings, MdVolumeUp } from 'react-icons/md';
+import { MdArrowBack, MdChevronRight, MdSettings, MdStarBorder, MdVolumeUp } from 'react-icons/md';
 import clsx from 'clsx';
 import { openUrl } from '@tauri-apps/plugin-opener';
 
@@ -26,6 +26,13 @@ import type {
   WebSearchEntry,
 } from '@/services/dictionaries/types';
 import type { Insets } from '@/types/misc';
+import { eventDispatcher } from '@/utils/event';
+import { getStoredEudicToken } from '../../../../../../../enhanced/features/eudic/token-storage';
+import { EudicApiClient } from '../../../../../../../enhanced/features/eudic/eudic-api-client';
+import {
+  getStoredEudicCategoryId,
+  setStoredEudicCategoryId,
+} from '../../../../../../../enhanced/features/eudic/wordbook-storage';
 
 const isTauri = isTauriAppPlatform();
 const ZERO_INSETS: Insets = { top: 0, right: 0, bottom: 0, left: 0 };
@@ -54,6 +61,7 @@ interface CardState {
 export interface UseDictionaryResultsArgs {
   word: string;
   lang?: string;
+  bookKey?: string;
 }
 
 export interface DictionaryResultsState {
@@ -80,6 +88,8 @@ export interface DictionaryResultsState {
   isSpeaking: boolean;
   /** Pronounce the current word via Edge TTS (falling back to platform speech). */
   speakWord: () => void;
+  /** Add the current word to the configured Eudic vocabulary list. */
+  saveToEudic: () => void;
 }
 
 /**
@@ -98,7 +108,9 @@ export interface DictionaryResultsState {
 export function useDictionaryResults({
   word,
   lang,
+  bookKey,
 }: UseDictionaryResultsArgs): DictionaryResultsState {
+  const _ = useTranslation();
   const { appService } = useEnv();
   const { dictionaries, settings } = useCustomDictionaryStore();
   const isDarkMode = useThemeStore((s) => s.isDarkMode);
@@ -183,6 +195,30 @@ export function useDictionaryResults({
       if (status !== 'playing') setIsSpeaking(false);
     });
   }, [currentWord, langCode, appService]);
+
+  const saveToEudic = useCallback(() => {
+    const token = getStoredEudicToken();
+    if (!token) {
+      eventDispatcher.dispatch('toast', {
+        message: _('Configure your Eudic token in Settings > Integrations first.'),
+        type: 'info',
+      });
+      return;
+    }
+    const categoryId = getStoredEudicCategoryId(bookKey);
+    new EudicApiClient(token)
+      .addWords([{ word: currentWord }], categoryId, langCode || 'en')
+      .then(() =>
+        eventDispatcher.dispatch('toast', { message: _('Added to Eudic'), type: 'success' }),
+      )
+      .then(() => setStoredEudicCategoryId(categoryId, bookKey))
+      .catch(() =>
+        eventDispatcher.dispatch('toast', {
+          message: _('Could not add word to Eudic'),
+          type: 'error',
+        }),
+      );
+  }, [currentWord, _]);
 
   // Stop any in-flight pronunciation when the word changes (in-content
   // navigation / reopen) or the popup unmounts.
@@ -435,6 +471,7 @@ export function useDictionaryResults({
     closeZoomedImage,
     isSpeaking,
     speakWord,
+    saveToEudic,
   };
 }
 
@@ -448,6 +485,7 @@ interface DictionaryResultsHeaderProps {
   onSpeak?: () => void;
   /** Whether pronunciation is in progress, for the active button state. */
   speaking?: boolean;
+  onSaveToEudic?: () => void;
 }
 
 export const DictionaryResultsHeader: React.FC<DictionaryResultsHeaderProps> = ({
@@ -458,11 +496,12 @@ export const DictionaryResultsHeader: React.FC<DictionaryResultsHeaderProps> = (
   onManage,
   onSpeak,
   speaking,
+  onSaveToEudic,
 }) => {
   const _ = useTranslation();
   return (
     <div className={clsx('flex h-8 w-full items-center justify-between px-2', headerClassName)}>
-      <div className='flex h-8 w-8 items-center justify-center'>
+      <div className='flex h-8 min-w-8 items-center justify-end gap-0'>
         {canGoBack ? (
           <button
             type='button'
@@ -497,6 +536,17 @@ export const DictionaryResultsHeader: React.FC<DictionaryResultsHeaderProps> = (
         </span>
       </div>
       <div className='flex h-8 w-8 items-center justify-center'>
+        {onSaveToEudic ? (
+          <button
+            type='button'
+            aria-label={_('Add to Eudic')}
+            title={_('Add to Eudic')}
+            onClick={onSaveToEudic}
+            className='btn btn-ghost btn-square btn-xs text-base-content/60 hover:text-base-content not-eink:hover:bg-base-200/60'
+          >
+            <MdStarBorder size={17} />
+          </button>
+        ) : null}
         {onManage ? (
           <button
             type='button'

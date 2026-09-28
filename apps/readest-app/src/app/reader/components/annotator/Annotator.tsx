@@ -85,6 +85,13 @@ import {
   sourceCfiFromSyntheticValue,
 } from '../../utils/globalAnnotations';
 import { annotationToolButtons } from './AnnotationTools';
+import { getStoredEudicToken } from '../../../../../../../enhanced/features/eudic/token-storage';
+import { EudicApiClient } from '../../../../../../../enhanced/features/eudic/eudic-api-client';
+import {
+  getStoredEudicCategoryId,
+  getStoredEudicAutoAdd,
+  setStoredEudicCategoryId,
+} from '../../../../../../../enhanced/features/eudic/wordbook-storage';
 import AnnotationRangeEditor from './AnnotationRangeEditor';
 import PageTurnHint from './PageTurnHint';
 import SelectionRangeEditor from './SelectionRangeEditor';
@@ -1091,6 +1098,9 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
         case 'tts':
           handleSpeakText(true);
           break;
+        case 'eudic':
+          void handleAddToEudic();
+          break;
         case 'share':
           handleShare();
           break;
@@ -1380,6 +1390,43 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
     void shareSelectedText(selection.text, position, appService);
     handleDismissPopupAndSelection();
   };
+
+  const handleAddToEudic = async () => {
+    const word = selection?.text?.trim();
+    if (!word) return;
+    const token = getStoredEudicToken();
+    if (!token) {
+      eventDispatcher.dispatch('toast', {
+        message: _('Configure your Eudic token in Settings > Integrations first.'),
+        type: 'info',
+      });
+      return;
+    }
+    try {
+      const categoryId = getStoredEudicCategoryId(bookKey);
+      await new EudicApiClient(token).addWords([{ word }], categoryId, 'en');
+      setStoredEudicCategoryId(categoryId, bookKey);
+      eventDispatcher.dispatch('toast', { message: _('Added to Eudic'), type: 'success' });
+      handleDismissPopupAndSelection();
+    } catch {
+      eventDispatcher.dispatch('toast', {
+        message: _('Could not add word to Eudic'),
+        type: 'error',
+      });
+    }
+  };
+
+  const autoAddedEudicSelectionRef = useRef<string | null>(null);
+  useEffect(() => {
+    const text = selection?.text?.trim();
+    if (!getStoredEudicAutoAdd() || !text || selection?.popup || !isSingleLookupTerm(text)) return;
+    const selectionKey = `${bookKey}:${selection?.cfi || text}`;
+    if (autoAddedEudicSelectionRef.current === selectionKey) return;
+    autoAddedEudicSelectionRef.current = selectionKey;
+    void handleAddToEudic();
+    // The selection callback is intentionally driven once per selection key.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selection?.text, selection?.cfi, selection?.popup, bookKey]);
 
   // Returns the brand-new highlight records (one per page of a cross-page
   // selection): only those are placeholders the note-cancel flow may remove;
@@ -2393,6 +2440,8 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
           onClick: handleProofread,
           disabled: !supportsProofread(bookData.book?.format) || popupSelectionNoCfi,
         };
+      case 'eudic':
+        return { tooltipText: _(label), Icon, onClick: () => void handleAddToEudic() };
       case 'share':
         return { tooltipText: _(label), Icon, onClick: handleShare };
       default:
@@ -2478,6 +2527,7 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
                 lang={bookData.bookDoc?.metadata.language as string}
                 onDismiss={handleDismissPopupShowToolbar}
                 onManage={onManage}
+                bookKey={bookKey}
               />
             );
           }
@@ -2492,6 +2542,7 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
               popupHeight={dictPopupHeight}
               onDismiss={handleDismissPopupShowToolbar}
               onManage={onManage}
+              bookKey={bookKey}
             />
           );
         })()}

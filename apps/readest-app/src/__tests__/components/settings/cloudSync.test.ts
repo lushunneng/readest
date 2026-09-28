@@ -30,13 +30,13 @@ describe('isCloudSyncInPlan', () => {
   });
 });
 
-describe('isCloudSyncAllowed (premium paywall)', () => {
-  test('third-party cloud sync requires a paid plan', () => {
-    expect(CLOUD_SYNC_REQUIRES_PREMIUM).toBe(true);
-    expect(isCloudSyncAllowed('free', false)).toBe(false);
+describe('isCloudSyncAllowed (standalone build)', () => {
+  test('third-party cloud sync is available with a configured provider', () => {
+    expect(CLOUD_SYNC_REQUIRES_PREMIUM).toBe(false);
+    expect(isCloudSyncAllowed('free', false)).toBe(true);
     expect(isCloudSyncAllowed('plus', false)).toBe(true);
     expect(isCloudSyncAllowed('pro', false)).toBe(true);
-    expect(isCloudSyncAllowed('purchase', false)).toBe(false);
+    expect(isCloudSyncAllowed('purchase', false)).toBe(true);
   });
 });
 
@@ -289,7 +289,7 @@ describe('isCloudSyncAllowed — customization unlock', () => {
     expect(isCloudSyncAllowed('purchase', true)).toBe(true);
   });
 
-  test('does not entitle a storage-only buyer after the grace period', () => {
-    expect(isCloudSyncAllowed('purchase', false)).toBe(false);
+  test('allows a storage-only buyer in the standalone build', () => {
+    expect(isCloudSyncAllowed('purchase', false)).toBe(true);
   });
 });

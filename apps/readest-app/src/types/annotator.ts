@@ -8,4 +8,5 @@ export type AnnotationToolType =
   | 'translate'
   | 'tts'
   | 'proofread'
+  | 'eudic'
   | 'share';

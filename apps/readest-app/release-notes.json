@@ -1,5 +1,16 @@
 {
   "releases": {
+    "0.12.12": {
+      "date": "2026-09-27",
+      "notes": ["Fixed Eudic Open API authentication and vocabulary collection requests"]
+    },
+    "0.12.11": {
+      "date": "2026-09-26",
+      "notes": [
+        "Updated from upstream Readest 0.12.10",
+        "Added Eudic Open API token configuration and vocabulary collection"
+      ]
+    },
     "0.12.10": {
       "date": "2026-09-22",
       "notes": [

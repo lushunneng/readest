@@ -21,6 +21,7 @@ export const ALL_ANNOTATION_TOOL_TYPES: AnnotationToolType[] = [
   'translate',
   'tts',
   'proofread',
+  'eudic',
   'share',
 ];
 
@@ -37,6 +38,7 @@ export const DEFAULT_ANNOTATION_TOOLBAR_ITEMS: AnnotationToolType[] = [
   'translate',
   'tts',
   'proofread',
+  'eudic',
 ];
 
 // Drop unknown/duplicate entries; fall back to the default when unset (a

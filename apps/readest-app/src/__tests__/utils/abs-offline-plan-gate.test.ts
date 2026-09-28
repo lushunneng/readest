@@ -19,13 +19,13 @@ describe('isAbsOfflineInPlan', () => {
   });
 });
 
-describe('isAbsOfflineAllowed (premium paywall)', () => {
-  test('offline Audiobookshelf downloads require a paid plan', () => {
-    expect(ABS_OFFLINE_REQUIRES_PREMIUM).toBe(true);
-    expect(isAbsOfflineAllowed('free', false)).toBe(false);
+describe('isAbsOfflineAllowed (standalone build)', () => {
+  test('offline Audiobookshelf downloads are available in the standalone build', () => {
+    expect(ABS_OFFLINE_REQUIRES_PREMIUM).toBe(false);
+    expect(isAbsOfflineAllowed('free', false)).toBe(true);
     expect(isAbsOfflineAllowed('plus', false)).toBe(true);
     expect(isAbsOfflineAllowed('pro', false)).toBe(true);
-    expect(isAbsOfflineAllowed('purchase', false)).toBe(false);
+    expect(isAbsOfflineAllowed('purchase', false)).toBe(true);
   });
 
   test('entitles a free user who bought Full Customization', () => {

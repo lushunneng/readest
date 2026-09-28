@@ -9,6 +9,7 @@ import { BsPencilSquare } from 'react-icons/bs';
 import { BsTranslate } from 'react-icons/bs';
 import { FaHeadphones } from 'react-icons/fa6';
 import { IoIosBuild } from 'react-icons/io';
+import { MdPlaylistAdd } from 'react-icons/md';
 import { AnnotationToolType } from '@/types/annotator';
 import { stubTranslation as _ } from '@/utils/misc';
 
@@ -96,6 +97,13 @@ export const annotationToolButtons = createAnnotationToolButtons([
     label: _('Proofread'),
     tooltip: _('Proofread text after selection'),
     Icon: IoIosBuild,
+  },
+  {
+    type: 'eudic',
+    label: _('Add to Eudic'),
+    tooltip: _('Add selected text to Eudic'),
+    Icon: MdPlaylistAdd,
+    quickAction: true,
   },
   {
     type: 'share',

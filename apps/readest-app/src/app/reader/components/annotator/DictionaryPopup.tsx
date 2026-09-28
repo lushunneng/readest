@@ -12,6 +12,7 @@ import {
 
 interface DictionaryPopupProps {
   word: string;
+  bookKey?: string;
   lang?: string;
   position: Position;
   trianglePosition: Position;
@@ -28,6 +29,7 @@ interface DictionaryPopupProps {
 
 const DictionaryPopup: React.FC<DictionaryPopupProps> = ({
   word,
+  bookKey,
   lang,
   position,
   trianglePosition,
@@ -36,7 +38,7 @@ const DictionaryPopup: React.FC<DictionaryPopupProps> = ({
   onDismiss,
   onManage,
 }) => {
-  const state = useDictionaryResults({ word, lang });
+  const state = useDictionaryResults({ word, lang, bookKey });
   return (
     <Popup
       width={popupWidth}
@@ -57,6 +59,7 @@ const DictionaryPopup: React.FC<DictionaryPopupProps> = ({
           onManage={onManage}
           onSpeak={state.speakWord}
           speaking={state.isSpeaking}
+          onSaveToEudic={state.saveToEudic}
         />
         <div className='min-h-0 flex-1'>
           <DictionaryResultsBody {...state} />

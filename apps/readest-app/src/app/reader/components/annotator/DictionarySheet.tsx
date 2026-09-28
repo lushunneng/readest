@@ -11,13 +11,20 @@ import {
 
 interface DictionarySheetProps {
   word: string;
+  bookKey?: string;
   lang?: string;
   onDismiss: () => void;
   onManage?: () => void;
 }
 
-const DictionarySheet: React.FC<DictionarySheetProps> = ({ word, lang, onDismiss, onManage }) => {
-  const state = useDictionaryResults({ word, lang });
+const DictionarySheet: React.FC<DictionarySheetProps> = ({
+  word,
+  bookKey,
+  lang,
+  onDismiss,
+  onManage,
+}) => {
+  const state = useDictionaryResults({ word, lang, bookKey });
   return (
     <Dialog
       isOpen
@@ -35,6 +42,7 @@ const DictionarySheet: React.FC<DictionarySheetProps> = ({ word, lang, onDismiss
           onManage={onManage}
           onSpeak={state.speakWord}
           speaking={state.isSpeaking}
+          onSaveToEudic={state.saveToEudic}
         />
       }
       contentClassName='px-0! mt-0!'

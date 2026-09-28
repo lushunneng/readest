@@ -11,14 +11,18 @@ import { getStoredEudicToken } from './token-storage';
 
 export interface EudicWord {
   word: string;
-  definition?: string;
-  example?: string;
 }
 
 export interface AddWordRequest {
-  id: number; // Study list ID (0 = default)
+  category_id: string; // Study list ID (0 = default)
   language: string; // Language code (e.g., 'en')
-  words: EudicWord[];
+  words: string[];
+}
+
+export interface EudicCategory {
+  id: string;
+  language: string;
+  name: string;
 }
 
 export interface EudicApiError extends Error {
@@ -30,6 +34,11 @@ const API_BASE_URL = 'https://api.frdic.com/api/open/v1';
 const MAX_RETRIES = 3;
 const INITIAL_DELAY = 1000; // 1 second
 const BACKOFF_FACTOR = 2;
+
+const authHeader = (token: string): string => {
+  const normalized = token.replace(/^NIS\s+/i, '').trim();
+  return `NIS ${normalized}`;
+};
 
 /**
  * Eudic API client with retry logic
@@ -74,8 +83,8 @@ export class EudicApiClient {
     if (!this.isConfigured()) {
       throw this.createError('EUDIC_TOKEN not configured', 401, 'NOT_CONFIGURED');
     }
-    const response = await fetch(`${API_BASE_URL}/studylist/category`, {
-      headers: { Authorization: `Bearer ${this.token}` },
+    const response = await fetch(`${API_BASE_URL}/studylist/category?language=en`, {
+      headers: { Authorization: authHeader(this.token!) },
     });
     if (response.status === 401 || response.status === 403) {
       throw this.createError('Authentication failed', response.status, 'AUTH_FAILED');
@@ -83,6 +92,49 @@ export class EudicApiClient {
     if (!response.ok) {
       throw this.createError('Unable to reach Eudic API', response.status, 'API_ERROR');
     }
+  }
+
+  async listCategories(language = 'en'): Promise<EudicCategory[]> {
+    if (!this.isConfigured()) {
+      throw this.createError('EUDIC_TOKEN not configured', 401, 'NOT_CONFIGURED');
+    }
+    const response = await fetch(
+      `${API_BASE_URL}/studylist/category?language=${encodeURIComponent(language)}`,
+      { headers: { Authorization: authHeader(this.token!) } },
+    );
+    if (response.status === 401 || response.status === 403) {
+      throw this.createError('Authentication failed', response.status, 'AUTH_FAILED');
+    }
+    if (!response.ok) {
+      throw this.createError('Unable to load Eudic wordbooks', response.status, 'API_ERROR');
+    }
+    const payload = (await response.json()) as { data?: EudicCategory[] };
+    return Array.isArray(payload.data) ? payload.data : [];
+  }
+
+  async createCategory(name: string, language = 'en'): Promise<EudicCategory> {
+    if (!this.isConfigured()) {
+      throw this.createError('EUDIC_TOKEN not configured', 401, 'NOT_CONFIGURED');
+    }
+    const response = await fetch(`${API_BASE_URL}/studylist/category`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: authHeader(this.token!),
+      },
+      body: JSON.stringify({ language, name: name.trim() }),
+    });
+    if (response.status === 401 || response.status === 403) {
+      throw this.createError('Authentication failed', response.status, 'AUTH_FAILED');
+    }
+    if (!response.ok) {
+      throw this.createError('Unable to create Eudic wordbook', response.status, 'API_ERROR');
+    }
+    const payload = (await response.json()) as { data?: EudicCategory };
+    if (!payload.data?.id) {
+      throw this.createError('Eudic returned an invalid wordbook', response.status, 'API_ERROR');
+    }
+    return payload.data;
   }
 
   /**
@@ -99,7 +151,7 @@ export class EudicApiClient {
    * - Catches 409/400 as "already exists"
    * - Retries on network errors
    */
-  async addWords(words: EudicWord[]): Promise<void> {
+  async addWords(words: EudicWord[], categoryId = '0', language = 'en'): Promise<void> {
     if (!this.isConfigured()) {
       throw this.createError('EUDIC_TOKEN not configured', 401, 'NOT_CONFIGURED');
     }
@@ -109,9 +161,9 @@ export class EudicApiClient {
     }
 
     const request: AddWordRequest = {
-      id: 0, // Default study list
-      language: 'en',
-      words,
+      category_id: categoryId,
+      language,
+      words: words.map(({ word }) => word),
     };
 
     try {
@@ -120,7 +172,7 @@ export class EudicApiClient {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${this.token}`,
+            Authorization: authHeader(this.token!),
           },
           body: JSON.stringify(request),
         });
@@ -132,7 +184,7 @@ export class EudicApiClient {
         }
 
         // Already exists - treat as success per v5-report.md section 2.2
-        if (response.status === 409 || response.status === 400) {
+        if (response.status === 409) {
           console.log(`Word already exists in Eudic (${response.status}), treating as success`);
           this.consecutiveFailures = 0;
           return;
@@ -170,7 +222,7 @@ export class EudicApiClient {
         `${API_BASE_URL}/studylist/words?word=${encodeURIComponent(word)}`,
         {
           headers: {
-            Authorization: `Bearer ${this.token}`,
+            Authorization: authHeader(this.token!),
           },
         },
       );
