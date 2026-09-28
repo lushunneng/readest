@@ -24,7 +24,7 @@ export class VocabularySyncQueue {
   private storage: VocabularyStorage;
   private apiClient: EudicApiClient;
   private syncIntervalMs: number;
-  private intervalId: number | null = null;
+  private intervalId: ReturnType<typeof setInterval> | null = null;
   private isSyncing = false;
   private onSyncComplete?: (successCount: number, failureCount: number) => void;
   private onSyncError?: (error: Error) => void;
@@ -54,8 +54,9 @@ export class VocabularySyncQueue {
       window.addEventListener('online', this.handleOnline);
     }
 
-    // Periodic sync
-    this.intervalId = window.setInterval(() => {
+    // Periodic sync works in browsers, SSR, and test runtimes.
+    const timerHost = typeof window !== 'undefined' ? window : globalThis;
+    this.intervalId = timerHost.setInterval(() => {
       this.syncPendingItems().catch((err) => {
         console.error('Periodic sync failed:', err);
       });
