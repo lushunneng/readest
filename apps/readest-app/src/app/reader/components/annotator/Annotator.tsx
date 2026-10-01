@@ -1391,8 +1391,8 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
     handleDismissPopupAndSelection();
   };
 
-  const handleAddToEudic = async () => {
-    const word = selection?.text?.trim();
+  const handleAddToEudic = async (selectedWord?: string, dismissOnSuccess = true) => {
+    const word = (selectedWord ?? selection?.text)?.trim();
     if (!word) return;
     const token = getStoredEudicToken();
     if (!token) {
@@ -1407,7 +1407,7 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
       await new EudicApiClient(token).addWords([{ word }], categoryId, 'en');
       setStoredEudicCategoryId(categoryId, bookKey);
       eventDispatcher.dispatch('toast', { message: _('Added to Eudic'), type: 'success' });
-      handleDismissPopupAndSelection();
+      if (dismissOnSuccess) handleDismissPopupAndSelection();
     } catch {
       eventDispatcher.dispatch('toast', {
         message: _('Could not add word to Eudic'),
@@ -1419,11 +1419,19 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
   const autoAddedEudicSelectionRef = useRef<string | null>(null);
   useEffect(() => {
     const text = selection?.text?.trim();
-    if (!getStoredEudicAutoAdd() || !text || selection?.popup || !isSingleLookupTerm(text)) return;
+    if (
+      !getStoredEudicAutoAdd() ||
+      !getStoredEudicToken() ||
+      !text ||
+      selection?.popup ||
+      !isSingleLookupTerm(text)
+    )
+      return;
     const selectionKey = `${bookKey}:${selection?.cfi || text}`;
     if (autoAddedEudicSelectionRef.current === selectionKey) return;
-    autoAddedEudicSelectionRef.current = selectionKey;
-    void handleAddToEudic();
+    void handleAddToEudic(text, false).then(() => {
+      autoAddedEudicSelectionRef.current = selectionKey;
+    });
     // The selection callback is intentionally driven once per selection key.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selection?.text, selection?.cfi, selection?.popup, bookKey]);

@@ -163,8 +163,10 @@ export class EudicApiClient {
     const request: AddWordRequest = {
       category_id: categoryId,
       language,
-      words: words.map(({ word }) => word),
+      words: words.map(({ word }) => word.trim()).filter(Boolean),
     };
+
+    if (request.words.length === 0) return;
 
     try {
       await this.retryRequest(async () => {
